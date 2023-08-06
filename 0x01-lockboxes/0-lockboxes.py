@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 def canUnlockAll(boxes):
         num_boxes = len(boxes)
         unlocked_boxes = set()
