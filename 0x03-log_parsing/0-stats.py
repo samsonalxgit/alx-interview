@@ -1,50 +1,44 @@
 #!/usr/bin/python3
-"""
-log parsing
-"""
 
+'''log_parsing'''
 import sys
 import re
+from collections import defaultdict
 
+def print_stats(file_size_sum, status_codes):
+    print(f"File size: {file_size_sum}")
+    for status_code in sorted(status_codes):
+        print(f"{status_code}: {status_codes[status_code]}")
 
-def output(log: dict) -> None:
-    """
-    helper function to display stats
-    """
-    print("File size: {}".format(log["file_size"]))
-    for code in sorted(log["code_frequency"]):
-        if log["code_frequency"][code]:
-            print("{}: {}".format(code, log["code_frequency"][code]))
-
-
-if __name__ == "__main__":
-    regex = re.compile(
-    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+\] "GET /projects/260 HTTP/1.1" (.{3}) (\d+)')  # nopep8
-
+def main():
+    file_size_sum = 0
+    status_codes = defaultdict(int)
     line_count = 0
-    log = {}
-    log["file_size"] = 0
-    log["code_frequency"] = {
-        str(code): 0 for code in [
-            200, 301, 400, 401, 403, 404, 405, 500]}
-
+    
+    # Regular expression to match valid log lines
+    log_pattern = re.compile(
+        r'^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - \[(.*?)\] "GET /projects/260 HTTP/1.1" (\d{3}) (\d+)$'
+    )
+    
     try:
         for line in sys.stdin:
-            line = line.strip()
-            match = regex.fullmatch(line)
-            if (match):
+            match = log_pattern.match(line)
+            if match:
+                status_code = match.group(3)
+                file_size = int(match.group(4))
+                
+                file_size_sum += file_size
+                status_codes[status_code] += 1
                 line_count += 1
-                code = match.group(1)
-                file_size = int(match.group(2))
+                
+                if line_count % 10 == 0:
+                    print_stats(file_size_sum, status_codes)
+                    
+    except KeyboardInterrupt:
+        # Handle keyboard interruption
+        print_stats(file_size_sum, status_codes)
+        sys.exit(0)
 
-                # File size
-                log["file_size"] += file_size
+if __name__ == "__main__":
+    main()
 
-                # status code
-                if (code.isdecimal()):
-                    log["code_frequency"][code] += 1
-
-                if (line_count % 10 == 0):
-                    output(log)
-    finally:
-        output(log)
