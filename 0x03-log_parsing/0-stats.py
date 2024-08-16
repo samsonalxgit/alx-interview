@@ -1,50 +1,75 @@
 #!/usr/bin/python3
+"""Log Parsing
+Write a script that reads stdin line by line and computes metrics:
 """
-log parsing
-"""
-
 import sys
-import re
+import signal
 
+# Define the status codes to track
+STATUS_CODES = [200, 301, 400, 401, 403, 404, 405, 500]
 
-def output(log: dict) -> None:
-    """
-    helper function to display stats
-    """
-    print("File size: {}".format(log["file_size"]))
-    for code in sorted(log["code_frequency"]):
-        if log["code_frequency"][code]:
-            print("{}: {}".format(code, log["code_frequency"][code]))
+def compute_statistics(lines):
+    total_size = 0
+    status_count = {code: 0 for code in STATUS_CODES}
 
+    for line in lines:
+        try:
+            # Split the line and extract the file size and status code
+            _, _, _, _, _, status_code_str, file_size_str = line.split(" ")
+            status_code = int(status_code_str)
+            file_size = int(file_size_str)
+
+            # Update the total file size
+            total_size += file_size
+
+            # Update the status code count if it's in the desired codes
+            if status_code in status_count:
+                status_count[status_code] += 1
+
+        except ValueError:
+            # Skip lines with incorrect format
+            continue
+
+    return total_size, status_count
+
+def print_statistics(total_size, status_count):
+    print(f"Total file size: {total_size}")
+    for status_code in sorted(status_count.keys()):
+        count = status_count[status_code]
+        if count > 0:
+            print(f"{status_code}: {count}")
+
+def signal_handler(sig, frame):
+    # Handle CTRL+C
+    print("\nProgram interrupted. Printing current statistics:")
+    print_statistics(total_file_size, status_code_count)
+    sys.exit(0)
 
 if __name__ == "__main__":
-    regex = re.compile(
-    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+\] "GET /projects/260 HTTP/1.1" (.{3}) (\d+)')  # nopep8
+    total_file_size = 0
+    status_code_count = {code: 0 for code in STATUS_CODES}
+    lines_buffer = []
 
-    line_count = 0
-    log = {}
-    log["file_size"] = 0
-    log["code_frequency"] = {
-        str(code): 0 for code in [
-            200, 301, 400, 401, 403, 404, 405, 500]}
+    # Register the signal handler for CTRL+C
+    signal.signal(signal.SIGINT, signal_handler)
 
     try:
         for line in sys.stdin:
-            line = line.strip()
-            match = regex.fullmatch(line)
-            if (match):
-                line_count += 1
-                code = match.group(1)
-                file_size = int(match.group(2))
+            lines_buffer.append(line.strip())
 
-                # File size
-                log["file_size"] += file_size
+            # Process and print statistics every 10 lines
+            if len(lines_buffer) >= 10:
+                total_file_size, status_code_count = compute_statistics(lines_buffer)
+                print_statistics(total_file_size, status_code_count)
+                lines_buffer = []
 
-                # status code
-                if (code.isdecimal()):
-                    log["code_frequency"][code] += 1
+    except KeyboardInterrupt:
+        # Handle manual interrupt (CTRL+C)
+        print("\nProgram interrupted. Printing current statistics:")
+        print_statistics(total_file_size, status_code_count)
+        sys.exit(0)
 
-                if (line_count % 10 == 0):
-                    output(log)
-    finally:
-        output(log)
+    # Print final statistics when there are remaining lines
+    if lines_buffer:
+        total_file_size, status_code_count = compute_statistics(lines_buffer)
+        print_statistics(total_file_size, status_code_count)
