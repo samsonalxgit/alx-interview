@@ -1,47 +1,53 @@
+#!/usr/bin/python3
+"""
+module for script that reads stdin line by line and computes metrics
+"""
+import sys
 
 
-def update_metrics(line, total_file_size, status_codes_stats):
-    '''Updates the metrics from a given HTTP request log.
-    Args:
-        line (str): The line of input from which to retrieve the metrics.
-    Returns:
-        int: The new total file size.
-    '''
-    line_info = extract_input(line)
-    status_code = line_info.get('status_code', '0')
-    if status_code in status_codes_stats.keys():
-        status_codes_stats[status_code] += 1
-    return total_file_size + line_info['file_size']
+def log_stats():
+    """Reads from stdin from piping"""
+    count = 0
+    total_size = 0
+    status_code = ['200', '301', '400', '401', '403', '404', '405', '500']
+    valid_codes_count = {}
 
-
-def run():
-    '''Starts the log parser.
-    '''
-    line_num = 0
-    total_file_size = 0
-    status_codes_stats = {
-        '200': 0,
-        '301': 0,
-        '400': 0,
-        '401': 0,
-        '403': 0,
-        '404': 0,
-        '405': 0,
-        '500': 0,
-    }
     try:
-        while True:
-            line = input()
-            total_file_size = update_metrics(
-                line,
-                total_file_size,
-                status_codes_stats,
-            )
-            line_num += 1
-            if line_num % 10 == 0:
-                print_statistics(total_file_size, status_codes_stats)
-    except (KeyboardInterrupt, EOFError):
-        print_statistics(total_file_size, status_codes_stats)
+        for line in sys.stdin:
+            if count == 10:
+                print("File size: {}".format(total_size))
+                for status in sorted(valid_codes_count):
+                    print('{}: {}'.format(status, valid_codes_count[status]))
+                count = 1
+            else:
+                count += 1
+
+            fields = line.split()
+            try:
+                file_size = int(fields[-1])
+                total_size += file_size
+            except ValueError:
+                pass
+
+            try:
+                valid_codes = fields[-2]
+                if valid_codes in status_code:
+                    if valid_codes_count.get(valid_codes, -1) == -1:
+                        valid_codes_count[valid_codes] = 1
+                    else:
+                        valid_codes_count[valid_codes] += 1
+            except (IndexError, ValueError, KeyError):
+                pass
+
+        print("File size: {}".format(total_size))
+        for status in sorted(valid_codes_count):
+            print('{}: {}'.format(status, valid_codes_count[status]))
+
+    except KeyboardInterrupt:
+        print("File size: {}".format(total_size))
+        for status in sorted(valid_codes_count):
+            print('{}: {}'.format(status, valid_codes_count[status]))
 
 
-
+if __name__ == "__main__":
+    log_stats()
