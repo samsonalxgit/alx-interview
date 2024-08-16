@@ -1,4 +1,3 @@
-            print('{:s}: {:d}'.format(status_code, num), flush=True)
 
 
 def update_metrics(line, total_file_size, status_codes_stats):
@@ -45,6 +44,4 @@ def run():
         print_statistics(total_file_size, status_codes_stats)
 
 
-if __name__ == '__main__':
-    run()
 
