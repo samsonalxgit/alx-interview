@@ -1,4 +1,8 @@
 #!/usr/bin/python3
+
+"""2D matrix rotation module.
+"""
+
 def rotate_2d_matrix(matrix):
     """Rotates an n x n 2D matrix 90 degrees clockwise in place."""
     if not matrix or not isinstance(matrix, list) or not all(isinstance(row, list) for row in matrix):
@@ -14,13 +18,6 @@ def rotate_2d_matrix(matrix):
     # Reverse each row
     for i in range(n):
         matrix[i].reverse()
-
-# Example usage:
-matrix = [
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, 9]
-]
 
 rotate_2d_matrix(matrix)
 print(matrix)
